@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizador de Linea de Tiempo</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0f0f1a;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+
+        /* ========== UPLOAD SCREEN ========== */
+        #upload-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        #upload-screen h1 {
+            font-size: 2.4rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #00d2ff, #7b2ff7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        #upload-screen .subtitle { color: #888; margin-bottom: 2rem; font-size: 1rem; }
+
+        .drop-zone {
+            width: 500px;
+            max-width: 90vw;
+            border: 2px dashed #7b2ff7;
+            border-radius: 16px;
+            padding: 3rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: rgba(123,47,247,0.05);
+        }
+
+        .drop-zone:hover, .drop-zone.drag-over {
+            background: rgba(123,47,247,0.15);
+            border-color: #00d2ff;
+        }
+
+        .drop-zone .icon { font-size: 3rem; margin-bottom: 1rem; }
+        .drop-zone p { margin-bottom: 0.5rem; }
+        .drop-zone .hint { font-size: 0.85rem; color: #666; }
+        #file-input { display: none; }
+
+        .format-info {
+            margin-top: 2rem;
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            max-width: 500px;
+            width: 90vw;
+        }
+
+        .format-info h3 { color: #00d2ff; margin-bottom: 0.8rem; font-size: 1rem; }
+
+        .format-info table { width: 100%; border-collapse: collapse; }
+
+        .format-info th, .format-info td {
+            padding: 0.4rem 0.8rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            font-size: 0.9rem;
+        }
+
+        .format-info th { color: #7b2ff7; }
+        .format-info .note { margin-top: 0.8rem; font-size: 0.8rem; color: #888; }
+
+        .btn-download-template {
+            margin-top: 1rem;
+            padding: 0.6rem 1.4rem;
+            background: linear-gradient(135deg, #7b2ff7, #00d2ff);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: opacity 0.3s;
+        }
+
+        .btn-download-template:hover { opacity: 0.85; }
+
+        /* ========== TIMELINE SCREEN ========== */
+        #timeline-screen { display: none; padding: 1.5rem; }
+
+        .toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            padding: 1rem 1.5rem;
+            background: rgba(255,255,255,0.04);
+            border-radius: 12px;
+        }
+
+        .toolbar h2 {
+            font-size: 1.4rem;
+            background: linear-gradient(135deg, #00d2ff, #7b2ff7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            cursor: text;
+            outline: none;
+            border-bottom: 1px dashed transparent;
+            transition: border-color 0.2s;
+            min-width: 60px;
+        }
+
+        .toolbar h2:hover {
+            border-bottom-color: rgba(123,47,247,0.5);
+        }
+
+        .toolbar h2:focus {
+            border-bottom-color: #7b2ff7;
+        }
+
+        .toolbar h2:empty::before {
+            content: 'Linea de Tiempo';
+            opacity: 0.3;
+        }
+
+        .toolbar-actions { display: flex; gap: 0.8rem; flex-wrap: wrap; align-items: center; }
+
+        /* ---- View toggle ---- */
+        .view-toggle {
+            display: flex;
+            background: rgba(255,255,255,0.08);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .view-toggle-btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            background: transparent;
+            color: #888;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            transition: all 0.25s;
+        }
+
+        .view-toggle-btn.active {
+            background: linear-gradient(135deg, #7b2ff7, #00d2ff);
+            color: #fff;
+        }
+
+        .view-toggle-btn:hover:not(.active) { background: rgba(255,255,255,0.1); color: #ccc; }
+
+        /* ---- Generic buttons ---- */
+        .btn {
+            padding: 0.55rem 1.2rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .btn-export { background: linear-gradient(135deg, #7b2ff7, #00d2ff); color: #fff; }
+        .btn-export:hover { opacity: 0.85; }
+        .btn-back { background: rgba(255,255,255,0.1); color: #ccc; }
+        .btn-back:hover { background: rgba(255,255,255,0.2); }
+
+        /* ---- Legend ---- */
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            margin-bottom: 1.5rem;
+            padding: 1rem 1.5rem;
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+        }
+
+        .legend-title {
+            width: 100%;
+            font-size: 0.85rem;
+            color: #888;
+            margin-bottom: 0.2rem;
+            cursor: text;
+            outline: none;
+            border-bottom: 1px dashed transparent;
+            transition: border-color 0.2s;
+            display: inline-block;
+        }
+
+        .legend-title:hover { border-bottom-color: rgba(123,47,247,0.4); color: #aaa; }
+        .legend-title:focus { border-bottom-color: #7b2ff7; color: #ccc; }
+        .legend-title:empty::before { content: 'Responsables:'; opacity: 0.3; }
+
+        .legend-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; }
+
+        .legend-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+
+        /* ========== TIMELINE CONTAINER ========== */
+        #timeline-container { position: relative; padding: 1rem 0 2rem; }
+
+        /* ---- Shared card styles ---- */
+        .timeline-card {
+            background: rgba(255,255,255,0.06);
+            border-radius: 10px;
+            padding: 0.9rem 1.1rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .timeline-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+        }
+
+        .timeline-date { font-size: 0.8rem; font-weight: 700; margin-bottom: 0.3rem; opacity: 0.9; }
+        .timeline-desc { font-size: 0.9rem; line-height: 1.45; color: #d0d0d0; }
+        .timeline-responsible { margin-top: 0.4rem; font-size: 0.78rem; opacity: 0.65; }
+
+        /* ========== VERTICAL LAYOUT ========== */
+        .timeline.vertical {
+            position: relative;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 1rem 0;
+        }
+
+        .timeline.vertical::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 3px;
+            height: 100%;
+            background: linear-gradient(to bottom, #7b2ff7, #00d2ff);
+            border-radius: 2px;
+        }
+
+        .timeline.vertical .timeline-item {
+            position: relative;
+            width: 50%;
+            padding: 0.8rem 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .timeline.vertical .timeline-item.left  { left: 0; text-align: right; }
+        .timeline.vertical .timeline-item.right { left: 50%; text-align: left; }
+
+        .timeline.vertical .timeline-item .dot {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            top: 1.4rem;
+            border: 3px solid #0f0f1a;
+            z-index: 2;
+        }
+
+        .timeline.vertical .timeline-item.left  .dot { right: -8px; }
+        .timeline.vertical .timeline-item.right .dot { left: -8px; }
+
+        .timeline.vertical .timeline-item.right .timeline-card { border-left: 4px solid; border-right: none; }
+        .timeline.vertical .timeline-item.left  .timeline-card { border-left: none; border-right: 4px solid; }
+
+        /* ========== HORIZONTAL LAYOUT ========== */
+        .timeline.horizontal {
+            display: flex;
+            flex-direction: row;
+            align-items: stretch;
+            overflow-x: auto;
+            overflow-y: visible;
+            max-width: none;
+            min-height: 500px;
+            padding: 0 1.5rem;
+            position: relative;
+            gap: 4px;
+            /* nice scrollbar */
+            scrollbar-width: thin;
+            scrollbar-color: #7b2ff7 rgba(255,255,255,0.05);
+        }
+
+        .timeline.horizontal::-webkit-scrollbar { height: 6px; }
+        .timeline.horizontal::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 3px; }
+        .timeline.horizontal::-webkit-scrollbar-thumb { background: #7b2ff7; border-radius: 3px; }
+
+        /* Horizontal spine */
+        .timeline.horizontal::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 50%;
+            height: 3px;
+            width: 100%;
+            transform: translateY(-50%);
+            background: linear-gradient(to right, #7b2ff7, #00d2ff);
+            border-radius: 2px;
+        }
+
+        /* Each item is a flex column occupying full height */
+        .timeline.horizontal .timeline-item {
+            flex: 0 0 210px;
+            width: 210px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            left: auto;
+            padding: 0 6px;
+            text-align: center;
+            margin-bottom: 0;
+        }
+
+        /* Upper half (above the line) */
+        .h-upper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;  /* push content toward the line */
+            width: 100%;
+            min-height: 0;
+            padding-bottom: 6px;
+        }
+
+        /* Lower half (below the line) */
+        .h-lower {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start; /* push content away from line */
+            width: 100%;
+            min-height: 0;
+            padding-top: 6px;
+        }
+
+        /* Vertical stem connecting card to dot */
+        .h-stem {
+            width: 2px;
+            height: 22px;
+            flex-shrink: 0;
+            opacity: 0.45;
+        }
+
+        /* Dot in horizontal sits between upper/lower */
+        .timeline.horizontal .dot {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 3px solid #0f0f1a;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Cards in horizontal: border on the side touching the line */
+        .timeline.horizontal .timeline-item.top .timeline-card {
+            border-bottom: 4px solid;
+            border-top: none;
+            border-left: none;
+            border-right: none;
+            width: 100%;
+            text-align: left;
+        }
+
+        .timeline.horizontal .timeline-item.bottom .timeline-card {
+            border-top: 4px solid;
+            border-bottom: none;
+            border-left: none;
+            border-right: none;
+            width: 100%;
+            text-align: left;
+        }
+
+        /* ========== EXPORT OVERLAY ========== */
+        #export-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #export-overlay.show { display: flex; }
+
+        .export-spinner { text-align: center; color: #fff; font-size: 1.1rem; }
+
+        .export-spinner::before {
+            content: '';
+            display: block;
+            width: 40px;
+            height: 40px;
+            margin: 0 auto 1rem;
+            border: 4px solid rgba(255,255,255,0.2);
+            border-top-color: #7b2ff7;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ========== TOAST ========== */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #e74c3c;
+            color: #fff;
+            padding: 0.8rem 1.6rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            z-index: 2000;
+            transition: transform 0.4s;
+            max-width: 90vw;
+            text-align: center;
+        }
+
+        .toast.show { transform: translateX(-50%) translateY(0); }
+
+        /* ========== RESPONSIVE ========== */
+        @media (max-width: 700px) {
+            /* Force vertical into single-column */
+            .timeline.vertical::before { left: 20px; }
+            .timeline.vertical .timeline-item {
+                width: 100%; left: 0 !important; text-align: left !important;
+                padding-left: 50px; padding-right: 1rem;
+            }
+            .timeline.vertical .timeline-item .dot { left: 12px !important; right: auto !important; }
+            .timeline.vertical .timeline-item .timeline-card {
+                border-left: 4px solid !important; border-right: none !important;
+            }
+
+            /* Horizontal: narrower cards */
+            .timeline.horizontal .timeline-item { flex: 0 0 160px; width: 160px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ========== UPLOAD SCREEN ========== -->
+<div id="upload-screen">
+    <h1>Timeline Viewer</h1>
+    <p class="subtitle">Visualiza lineas de tiempo desde archivos Excel</p>
+
+    <div class="drop-zone" id="drop-zone">
+        <div class="icon">&#128197;</div>
+        <p>Arrastra tu archivo Excel aqui</p>
+        <p>o <strong>haz clic</strong> para seleccionarlo</p>
+        <p class="hint">Formatos aceptados: .xlsx, .xls</p>
+    </div>
+    <input type="file" id="file-input" accept=".xlsx,.xls">
+
+    <div class="format-info">
+        <h3>Formato requerido del archivo</h3>
+        <table>
+            <thead><tr><th>Columna A</th><th>Columna B</th><th>Columna C</th></tr></thead>
+            <tbody><tr><td>Fecha</td><td>Descripcion</td><td>Responsable</td></tr></tbody>
+        </table>
+        <p class="note">La primera fila debe contener los encabezados. Fechas aceptadas: DD/MM/AAAA, AAAA-MM-DD o formato nativo de Excel.</p>
+        <button class="btn-download-template" id="btn-template">Descargar plantilla de ejemplo</button>
+    </div>
+</div>
+
+<!-- ========== TIMELINE SCREEN ========== -->
+<div id="timeline-screen">
+
+    <div class="toolbar">
+        <h2 id="timeline-title" contenteditable="true" spellcheck="false" title="Haz clic para editar el titulo">Linea de Tiempo</h2>
+        <div class="toolbar-actions">
+
+            <!-- View toggle -->
+            <div class="view-toggle" id="view-toggle">
+                <button class="view-toggle-btn active" id="btn-vertical" title="Vista vertical">
+                    &#9649; Vertical
+                </button>
+                <button class="view-toggle-btn" id="btn-horizontal" title="Vista horizontal">
+                    &#9643; Horizontal
+                </button>
+            </div>
+
+            <button class="btn btn-export" id="btn-export">&#128247; Exportar imagen</button>
+            <button class="btn btn-back"   id="btn-back">&#8592; Cargar otro archivo</button>
+        </div>
+    </div>
+
+    <div id="legend-container" class="legend"></div>
+
+    <div id="timeline-container">
+        <div class="timeline vertical" id="timeline"></div>
+    </div>
+</div>
+
+<!-- Export overlay -->
+<div id="export-overlay">
+    <div class="export-spinner">Generando imagen...</div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+
+    /* ---- DOM refs ---- */
+    const uploadScreen    = document.getElementById('upload-screen');
+    const timelineScreen  = document.getElementById('timeline-screen');
+    const dropZone        = document.getElementById('drop-zone');
+    const fileInput       = document.getElementById('file-input');
+    const timelineEl      = document.getElementById('timeline');
+    const legendContainer = document.getElementById('legend-container');
+    const btnExport       = document.getElementById('btn-export');
+    const btnBack         = document.getElementById('btn-back');
+    const btnTemplate     = document.getElementById('btn-template');
+    const btnVertical     = document.getElementById('btn-vertical');
+    const btnHorizontal   = document.getElementById('btn-horizontal');
+    const exportOverlay   = document.getElementById('export-overlay');
+    const toast           = document.getElementById('toast');
+
+    /* ---- State ---- */
+    let currentItems = [];
+    let currentMode  = 'vertical'; // 'vertical' | 'horizontal'
+
+    /* ---- Color palette ---- */
+    const PALETTE = [
+        '#e74c3c','#2ecc71','#3498db','#f39c12','#9b59b6',
+        '#1abc9c','#e67e22','#e84393','#00cec9','#6c5ce7',
+        '#fd79a8','#00b894','#fdcb6e','#74b9ff','#a29bfe',
+        '#ff7675','#55efc4','#ffeaa7','#dfe6e9','#fab1a0',
+        '#81ecec','#636e72','#d63031','#0984e3','#b2bec3'
+    ];
+
+    let colorIndex = 0;
+    const colorMap = {};
+
+    function getColor(responsible) {
+        const key = responsible.trim().toLowerCase();
+        if (!colorMap[key]) {
+            colorMap[key] = PALETTE[colorIndex % PALETTE.length];
+            colorIndex++;
+        }
+        return colorMap[key];
+    }
+
+    /* ---- Toast ---- */
+    function showToast(msg) {
+        toast.textContent = msg;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 4000);
+    }
+
+    /* ---- Date helpers ---- */
+    function parseDate(raw) {
+        if (raw == null) return null;
+        if (typeof raw === 'number') {
+            const epoch = new Date(1899, 11, 30);
+            epoch.setDate(epoch.getDate() + raw);
+            return epoch;
+        }
+        const str = String(raw).trim();
+        if (!str) return null;
+        let m = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+        if (m) return new Date(+m[3], +m[2] - 1, +m[1]);
+        m = str.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+        if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
+        const d = new Date(str);
+        return isNaN(d) ? null : d;
+    }
+
+    function formatDate(d) {
+        return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    /* ---- Excel processing ---- */
+    function processFile(file) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const wb   = XLSX.read(data, { type: 'array', cellDates: false });
+                const ws   = wb.Sheets[wb.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+
+                if (rows.length < 2) {
+                    showToast('El archivo no tiene datos. Se requiere encabezado + al menos una fila.');
+                    return;
+                }
+
+                const header  = rows[0].map(h => String(h || '').trim().toLowerCase());
+                const colDate = header.findIndex(h => h.includes('fecha'));
+                const colDesc = header.findIndex(h => h.includes('descripcion') || h.includes('descripci'));
+                const colResp = header.findIndex(h => h.includes('responsable'));
+
+                if (colDate === -1 || colDesc === -1 || colResp === -1) {
+                    showToast('Columnas no encontradas. El archivo debe tener: Fecha, Descripcion, Responsable.');
+                    return;
+                }
+
+                const items = [];
+                for (let i = 1; i < rows.length; i++) {
+                    const row = rows[i];
+                    if (!row || row[colDate] == null) continue;
+                    const date = parseDate(row[colDate]);
+                    if (!date) continue;
+                    items.push({
+                        date:        date,
+                        description: String(row[colDesc] || '').trim(),
+                        responsible: String(row[colResp] || 'Sin asignar').trim()
+                    });
+                }
+
+                if (items.length === 0) {
+                    showToast('No se encontraron registros validos. Revisa el formato de las fechas.');
+                    return;
+                }
+
+                items.sort((a, b) => a.date - b.date);
+
+                // Reset colors
+                colorIndex = 0;
+                Object.keys(colorMap).forEach(k => delete colorMap[k]);
+
+                currentItems = items;
+                buildLegend(items);
+                render();
+
+                uploadScreen.style.display  = 'none';
+                timelineScreen.style.display = 'block';
+
+            } catch (err) {
+                console.error(err);
+                showToast('Error al leer el archivo. Asegurate de que sea un Excel valido.');
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    /* ---- Legend ---- */
+    function buildLegend(items) {
+        // Trigger color assignment in order
+        items.forEach(item => getColor(item.responsible));
+
+        const prevLabel = legendContainer.querySelector('.legend-title');
+        const savedLabel = prevLabel ? prevLabel.textContent.trim() : 'Responsables:';
+        legendContainer.innerHTML = `<div class="legend-title" contenteditable="true" spellcheck="false" title="Haz clic para editar">${savedLabel}</div>`;
+        Object.keys(colorMap).forEach(key => {
+            const div = document.createElement('div');
+            div.className = 'legend-item';
+            div.innerHTML = `<span class="legend-dot" style="background:${colorMap[key]}"></span>${escapeHtml(key.charAt(0).toUpperCase() + key.slice(1))}`;
+            legendContainer.appendChild(div);
+        });
+    }
+
+    /* ---- Master render dispatcher ---- */
+    function render() {
+        timelineEl.className = `timeline ${currentMode}`;
+        timelineEl.innerHTML = '';
+        if (currentMode === 'vertical') renderVertical(currentItems);
+        else renderHorizontal(currentItems);
+    }
+
+    /* ---- Vertical render ---- */
+    function renderVertical(items) {
+        items.forEach((item, i) => {
+            const color = getColor(item.responsible);
+            const side  = i % 2 === 0 ? 'left' : 'right';
+
+            const el = document.createElement('div');
+            el.className = `timeline-item ${side}`;
+            el.innerHTML = `
+                <div class="dot" style="background:${color}"></div>
+                <div class="timeline-card" style="border-color:${color}">
+                    <div class="timeline-date" style="color:${color}">${formatDate(item.date)}</div>
+                    <div class="timeline-desc">${escapeHtml(item.description)}</div>
+                    <div class="timeline-responsible">&#128100; ${escapeHtml(item.responsible)}</div>
+                </div>`;
+            timelineEl.appendChild(el);
+        });
+    }
+
+    /* ---- Horizontal render ---- */
+    function renderHorizontal(items) {
+        items.forEach((item, i) => {
+            const color = getColor(item.responsible);
+            const side  = i % 2 === 0 ? 'top' : 'bottom';
+
+            const el = document.createElement('div');
+            el.className = `timeline-item ${side}`;
+
+            const card = `
+                <div class="timeline-card" style="border-color:${color}">
+                    <div class="timeline-date" style="color:${color}">${formatDate(item.date)}</div>
+                    <div class="timeline-desc">${escapeHtml(item.description)}</div>
+                    <div class="timeline-responsible">&#128100; ${escapeHtml(item.responsible)}</div>
+                </div>`;
+
+            const stem = `<div class="h-stem" style="background:${color}"></div>`;
+
+            if (side === 'top') {
+                el.innerHTML = `
+                    <div class="h-upper">${card}${stem}</div>
+                    <div class="dot" style="background:${color}"></div>
+                    <div class="h-lower"></div>`;
+            } else {
+                el.innerHTML = `
+                    <div class="h-upper"></div>
+                    <div class="dot" style="background:${color}"></div>
+                    <div class="h-lower">${stem}${card}</div>`;
+            }
+
+            timelineEl.appendChild(el);
+        });
+    }
+
+    /* ---- View toggle ---- */
+    btnVertical.addEventListener('click', () => {
+        if (currentMode === 'vertical') return;
+        currentMode = 'vertical';
+        btnVertical.classList.add('active');
+        btnHorizontal.classList.remove('active');
+        if (currentItems.length) render();
+    });
+
+    btnHorizontal.addEventListener('click', () => {
+        if (currentMode === 'horizontal') return;
+        currentMode = 'horizontal';
+        btnHorizontal.classList.add('active');
+        btnVertical.classList.remove('active');
+        if (currentItems.length) render();
+    });
+
+    /* ---- Export to image ---- */
+    btnExport.addEventListener('click', function () {
+        exportOverlay.classList.add('show');
+
+        const wrapper = document.createElement('div');
+        wrapper.style.cssText = `
+            background:#0f0f1a;
+            padding:2rem;
+            display:inline-block;
+            ${currentMode === 'horizontal' ? 'min-width:1200px;' : 'min-width:960px;'}
+        `;
+
+        const title = document.createElement('h2');
+        const titleText = document.getElementById('timeline-title').textContent.trim() || 'Linea de Tiempo';
+        title.textContent = titleText;
+        title.style.cssText = 'font-family:Segoe UI,sans-serif;text-align:center;margin-bottom:1rem;font-size:1.6rem;color:#00d2ff;';
+        wrapper.appendChild(title);
+
+        wrapper.appendChild(legendContainer.cloneNode(true));
+        wrapper.appendChild(document.getElementById('timeline-container').cloneNode(true));
+
+        document.body.appendChild(wrapper);
+
+        html2canvas(wrapper, {
+            backgroundColor: '#0f0f1a',
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            windowWidth: currentMode === 'horizontal' ? 1800 : 1200
+        }).then(canvas => {
+            document.body.removeChild(wrapper);
+            exportOverlay.classList.remove('show');
+            const link = document.createElement('a');
+            link.download = `linea_de_tiempo_${currentMode}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }).catch(err => {
+            document.body.removeChild(wrapper);
+            exportOverlay.classList.remove('show');
+            console.error(err);
+            showToast('Error al exportar la imagen.');
+        });
+    });
+
+    /* ---- Download template ---- */
+    btnTemplate.addEventListener('click', function () {
+        const wsData = [
+            ['Fecha','Descripcion','Responsable'],
+            ['15/01/2025','Inicio del proyecto','Juan Perez'],
+            ['01/02/2025','Revision de requerimientos','Maria Lopez'],
+            ['15/02/2025','Diseno de arquitectura','Juan Perez'],
+            ['01/03/2025','Desarrollo fase 1','Carlos Ruiz'],
+            ['15/03/2025','Pruebas unitarias','Maria Lopez'],
+            ['01/04/2025','Entrega final','Carlos Ruiz']
+        ];
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        ws['!cols'] = [{ wch: 14 }, { wch: 35 }, { wch: 20 }];
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Timeline');
+        XLSX.writeFile(wb, 'plantilla_timeline.xlsx');
+    });
+
+    /* ---- File handling ---- */
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    dropZone.addEventListener('dragover', e => {
+        e.preventDefault();
+        dropZone.classList.add('drag-over');
+    });
+
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+
+    dropZone.addEventListener('drop', e => {
+        e.preventDefault();
+        dropZone.classList.remove('drag-over');
+        const file = e.dataTransfer.files[0];
+        if (file) processFile(file);
+    });
+
+    fileInput.addEventListener('change', e => {
+        const file = e.target.files[0];
+        if (file) processFile(file);
+    });
+
+    /* ---- Back ---- */
+    btnBack.addEventListener('click', () => {
+        timelineScreen.style.display = 'none';
+        uploadScreen.style.display   = 'flex';
+        fileInput.value = '';
+        currentItems = [];
+    });
+
+})();
+</script>
+
+</body>
+</html>

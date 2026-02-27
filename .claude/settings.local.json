@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Claude_Preview__preview_start",
+      "Bash(where npx)",
+      "Bash(npx serve --version)",
+      "Bash(npm install -g serve)",
+      "Bash(serve --version)"
+    ]
+  }
+}

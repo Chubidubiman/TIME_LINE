@@ -1,0 +1,70 @@
+# ── Sistema operativo ──────────────────────────────────────
+# Windows
+Thumbs.db
+Thumbs.db:encdata
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+
+# ── Editores e IDEs ────────────────────────────────────────
+# VS Code
+.vscode/*
+!.vscode/extensions.json
+
+# JetBrains
+.idea/
+*.iml
+
+# Vim / Emacs
+*.swp
+*.swo
+*~
+\#*\#
+
+# ── Node.js (por si se agrega un servidor local) ───────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+package-lock.json
+yarn.lock
+
+# ── Archivos temporales y de prueba ────────────────────────
+*.tmp
+*.temp
+*.log
+*.bak
+*.orig
+
+# ── Exportaciones generadas ────────────────────────────────
+# Imágenes exportadas desde la app (no se versiona el output)
+linea_de_tiempo*.png
+linea_de_tiempo*.jpg
+
+# Plantillas de prueba descargadas
+plantilla_timeline.xlsx
+
+# ── Archivos sensibles ─────────────────────────────────────
+.env
+.env.*
+*.key
+*.pem
+secrets.*

@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "static-server",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["C:/Users/Chubi/AppData/Roaming/npm/node_modules/serve/build/main.js", "-l", "8080", "."],
+      "port": 8080
+    }
+  ]
+}
