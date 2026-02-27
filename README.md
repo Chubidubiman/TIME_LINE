@@ -1,6 +1,8 @@
 # 📅 Timeline Viewer
 
-Visualizador interactivo de líneas de tiempo generadas desde archivos Excel. Permite cargar datos, visualizarlos en formato vertical u horizontal, personalizar etiquetas y exportar la línea de tiempo como imagen.
+Visualizador interactivo de líneas de tiempo generadas desde archivos Excel. Permite cargar datos, visualizarlos en formato vertical u horizontal, personalizar etiquetas, cambiar el tema visual y exportar la línea de tiempo como imagen.
+
+🔗 **Repositorio:** [github.com/Chubidubiman/TIME_LINE](https://github.com/Chubidubiman/TIME_LINE)
 
 ---
 
@@ -10,9 +12,9 @@ Visualizador interactivo de líneas de tiempo generadas desde archivos Excel. Pe
 - 🎨 **Código de colores automático** — Cada responsable recibe un color único y consistente
 - 🔀 **Dos modos de vista** — Alterna entre vista **Vertical** y **Horizontal** con un clic
 - ✏️ **Títulos editables** — El título principal y la etiqueta de la leyenda son editables directamente en pantalla
-- 🖼️ **Exportación a imagen** — Descarga la línea de tiempo completa como archivo `.png` con el título personalizado
+- 🖼️ **Exportación a imagen** — Descarga la línea de tiempo completa como `.png` respetando el tema y título personalizado
 - 📋 **Plantilla de ejemplo** — Descarga un Excel de muestra con el formato correcto
-- 🌙 **Tema oscuro** — Interfaz moderna con fondo oscuro y colores degradados
+- 🌙☀️ **Tema oscuro / claro** — Switch para alternar entre temas; la preferencia se guarda automáticamente
 
 ---
 
@@ -66,24 +68,44 @@ El archivo debe tener **exactamente estas tres columnas** en la primera hoja, co
 
 ## 🖥️ Interfaz
 
+### Pantalla de carga
 ```
-┌─────────────────────────────────────────────────────────┐
-│  Linea de Tiempo*    [Vertical][Horizontal] [Exportar]  │  ← * Editable
-├─────────────────────────────────────────────────────────┤
-│  Responsables*:  ● Juan  ● Maria  ● Carlos              │  ← * Editable
-├─────────────────────────────────────────────────────────┤
-│                                                         │
-│   [Evento 1]          ●                                 │
-│                       │                                 │
-│                       ●          [Evento 2]             │
-│                       │                                 │
-│   [Evento 3]          ●                                 │
-│                                                         │
-└─────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────┐        [☀️ Claro] ← esquina fija
+│           Timeline Viewer              │
+│   Visualiza lineas de tiempo...        │
+│                                        │
+│   ┌──────────────────────────────┐     │
+│   │  📅  Arrastra tu Excel aquí  │     │
+│   └──────────────────────────────┘     │
+│                                        │
+│   [ Descargar plantilla de ejemplo ]   │
+│                                        │
+│   🐙 github.com/Chubidubiman/TIME_LINE │
+└────────────────────────────────────────┘
+```
+
+### Pantalla de línea de tiempo
+```
+┌──────────────────────────────────────────────────────────┐   [☀️ Claro]
+│  Linea de Tiempo*  [Vertical][Horizontal] [Exportar] [←] │  ← * Editable
+├──────────────────────────────────────────────────────────┤
+│  Responsables*:  ● Juan  ● Maria  ● Carlos               │  ← * Editable
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│   [Evento 1]          ●                                  │
+│                       │                                  │
+│                       ●          [Evento 2]              │
+│                       │                                  │
+│   [Evento 3]          ●                                  │
+│                                                          │
+└──────────────────────────────────────────────────────────┘
 ```
 
 ### Títulos editables
-Haz clic sobre **"Linea de Tiempo"** o **"Responsables:"** para editarlos. El cambio se refleja automáticamente en la imagen exportada.
+Haz clic sobre **"Linea de Tiempo"** o **"Responsables:"** para editarlos. Ambos cambios se reflejan automáticamente en la imagen exportada.
+
+### Cambio de tema
+El botón **☀️ Claro / 🌙 Oscuro** en la esquina superior derecha alterna entre temas. La preferencia se guarda en `localStorage` y se restaura al recargar la página. La imagen exportada también respeta el tema activo al momento de exportar.
 
 ---
 
