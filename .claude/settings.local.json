@@ -5,7 +5,10 @@
       "Bash(where npx)",
       "Bash(npx serve --version)",
       "Bash(npm install -g serve)",
-      "Bash(serve --version)"
+      "Bash(serve --version)",
+      "Bash(git add Dockerfile)",
+      "Bash(git commit:*)",
+      "Bash(git push origin dev)"
     ]
   }
 }
